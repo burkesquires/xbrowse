@@ -77,6 +77,10 @@ CUSTOM_POPULATIONS_DB = _conn['xcustom_refpops']
 
 READ_VIZ_BAM_PATH = "/Volumes/hd/xbrowse/data/bams/"
 
+BIG_QUERY_PROJECTS = set([
+    "1kg_subset",
+    "",
+])
 # Email settings
 #EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 

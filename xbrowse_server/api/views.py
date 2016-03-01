@@ -2,6 +2,7 @@ import datetime
 import csv
 import json
 import sys
+import seqr.views
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
@@ -55,6 +56,11 @@ def mendelian_variant_search(request):
     # esp because error should be described in json, not just 404
     project, family = get_project_and_family_for_user(request.user, request.GET)
 
+    if project.project_id in settings.BIG_QUERY_PROJECTS:
+        return seqr.views.variant_search_api(request)   
+            
+        
+    sys.stderr.write(__file__ + " mendelian_variant_search(" + str(request) + ")\n")
     form = api_forms.MendelianVariantSearchForm(request.GET)
     if form.is_valid():
 
@@ -89,6 +95,7 @@ def mendelian_variant_search(request):
 @log_request('mendelian_variant_search_spec_api')
 def mendelian_variant_search_spec(request):
 
+    #sys.stderr.write(__file__ + " mendelian_variant_search_spec(" + str(request) + ")\n")
     project, family = get_project_and_family_for_user(request.user, request.GET)
 
     # TODO: use form
@@ -125,7 +132,8 @@ def mendelian_variant_search_spec(request):
 @login_required
 @log_request('get_cohort_variants')
 def cohort_variant_search(request):
-
+    sys.stderr.write(__file__ + " cohort_variant_search(" + str(request) + ")\n")
+    
     project, cohort = get_project_and_cohort_for_user(request.user, request.GET)
     if not project.can_view(request.user):
         return HttpResponse('unauthorized')
@@ -162,7 +170,8 @@ def cohort_variant_search(request):
 @login_required
 @log_request('cohort_variant_search_spec_api')
 def cohort_variant_search_spec(request):
-
+    sys.stderr.write(__file__ + " cohort_variant_search_spec(" + str(request) + ")\n")
+    
     project, cohort = get_project_and_cohort_for_user(request.user, request.GET)
 
     # TODO: use form

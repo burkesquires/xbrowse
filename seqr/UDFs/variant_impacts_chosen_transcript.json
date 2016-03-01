@@ -1,0 +1,143 @@
+function choose_transcript(row, emit) {
+  
+  var worst_severity_rank = 1000000;
+  var worst_vep = null;
+  var worst_consequence = null;
+  
+  for(var i = 0; i < row.vep.length; i+=1) {
+     var vep =  row.vep[i];
+     for(var j = 0; j < vep.consequences.length; j+=1) {
+         var consequence = vep.consequences[j];
+        if(consequence.severity_rank < worst_severity_rank || (
+           consequence.severity_rank == worst_severity_rank && vep.canonical == 'YES') ) {  //TODO: check canonical
+            worst_severity_rank = consequence.severity_rank;
+            worst_consequence = consequence;
+            worst_vep = vep;
+        }
+     }
+  }
+  
+  emit({
+    chrom: row.chrom, 
+    pos: row.pos,
+    ref: row.ref,
+    alt: row.alt,
+    xpos: row.xpos,
+    gene: worst_vep.gene,
+    feature: worst_vep.feature,
+    feature_type: worst_vep.feature_type,
+    consequence: worst_consequence.consequence,
+    severity_rank: worst_consequence.severity_rank,
+    cdna_position: worst_vep.cdna_position,
+    cds_position: worst_vep.cds_position,
+    protein_position: worst_vep.protein_position,
+    amino_acids: worst_vep.amino_acids,
+    codons: worst_vep.codons,
+    strand: worst_vep.strand,
+    symbol: worst_vep.symbol,
+    symbol_source: worst_vep.symbol_source,
+    hgnc_id: worst_vep.hgnc_id,
+    biotype: worst_vep.biotype,
+    canonical: worst_vep.canonical == 'YES',
+    //domains: worst_vep.domains,
+    //domains.domain: worst_vep.domains.domain,
+    hgvsc: worst_vep.hgvsc,
+    hgvsp: worst_vep.hgvsp,
+    lof_info: worst_vep.lof_info,
+    lof_flags: worst_vep.lof_flags,
+    lof_filter: worst_vep.lof_filter,
+    //lof_filters: worst_vep.lof_filters,
+    //lof_filters.lof_filter: worst_vep.lof_filters.lof_filter,
+    lof: worst_vep.lof,
+    sift_pred: worst_vep.sift_pred,
+    polyphen2_hvar_pred: worst_vep.polyphen2_hvar_pred,
+    cadd_phred: worst_vep.cadd_phred,
+    mutationtaster_pred: worst_vep.mutationtaster_pred,
+    fathmm_pred: worst_vep.fathmm_pred,
+    metasvm_pred: worst_vep.metasvm_pred, 
+  });
+}
+
+bigquery.defineFunction(
+  'choose_transcript',                          // Name of the function exported to SQL
+  ['chrom', 
+   'pos', 
+   'ref', 
+   'alt', 
+   'xpos', 
+   'vep.gene', 
+   'vep.feature', 
+   'vep.feature_type', 
+   'vep.consequences.consequence', 
+   'vep.consequences.severity_rank',
+   'vep.cdna_position',
+   'vep.cds_position',
+   'vep.protein_position',
+   'vep.amino_acids',
+'vep.codons',
+'vep.strand',
+'vep.symbol',
+'vep.symbol_source',
+'vep.hgnc_id',
+'vep.biotype',
+'vep.canonical',
+//'vep.domains',
+//'vep.domains.domain',
+'vep.hgvsc',
+'vep.hgvsp',
+'vep.lof_info',
+'vep.lof_flags',
+'vep.lof_filter',
+//'vep.lof_filters',
+//'vep.lof_filters.lof_filter',
+'vep.lof',
+'vep.sift_pred',
+'vep.polyphen2_hvar_pred',
+'vep.cadd_phred',
+'vep.mutationtaster_pred',
+'vep.fathmm_pred',
+'vep.metasvm_pred'
+  ],
+  
+  
+  // Names of input columns
+  [{'name': 'chrom',  'type': 'string'},       // Output schema
+   {'name': 'pos',    'type': 'integer'},
+   {'name': 'ref',    'type': 'string'},
+   {'name': 'alt',    'type': 'string'},
+   {'name': 'xpos',   'type': 'integer'},
+   {'name': 'gene',   'type': 'string'},
+   {'name': 'feature','type': 'string'},
+   {'name': 'feature_type', 'type': 'string'},
+   {'name': 'consequence',  'type': 'string'},
+   {'name': 'severity_rank','type': 'integer'},
+   {'name': 'cdna_position', 'type': 'string'},
+ {'name': 'cds_position', 'type': 'string'},
+ {'name': 'protein_position', 'type': 'string'},
+ {'name': 'amino_acids', 'type': 'string'},
+ {'name': 'codons', 'type': 'string'},
+ {'name': 'strand', 'type': 'string'},
+ {'name': 'symbol', 'type': 'string'},
+ {'name': 'symbol_source', 'type': 'string'},
+ {'name': 'hgnc_id', 'type': 'string'},
+ {'name': 'biotype', 'type': 'string'},
+ {'name': 'canonical', 'type': 'boolean'},
+// {'name': 'domains', 'type': 'string'},
+// {'name': 'domains.domain', 'type': 'string'},
+ {'name': 'hgvsc', 'type': 'string'},
+ {'name': 'hgvsp', 'type': 'string'},
+ {'name': 'lof_info', 'type': 'string'},
+ {'name': 'lof_flags', 'type': 'string'},
+ {'name': 'lof_filter', 'type': 'string'},
+// {'name': 'lof_filters', 'type': 'string'},
+// {'name': 'lof_filters.lof_filter', 'type': 'string'},
+ {'name': 'lof', 'type': 'string'},
+ {'name': 'sift_pred', 'type': 'string'},
+ {'name': 'polyphen2_hvar_pred', 'type': 'string'},
+ {'name': 'cadd_phred', 'type': 'string'},
+ {'name': 'mutationtaster_pred', 'type': 'string'},
+ {'name': 'metasvm_pred', 'type': 'string'}, 
+ {'name': 'fathmm_pred', 'type': 'string'}, 
+],
+  choose_transcript                       // Reference to JavaScript UDF
+);

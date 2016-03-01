@@ -346,7 +346,7 @@ def calculate_cohort_gene_search(cohort, search_spec):
 
 
 def calculate_mendelian_variant_search(search_spec, xfamily):
-    sys.stderr.write("     mendelian_variant_search for %s - search mode: %s  %s\n" % (xfamily.project_id, search_spec.search_mode, search_spec.__dict__))
+    #sys.stderr.write("     mendelian_variant_search for %s - search mode: %s  %s\n" % (xfamily.project_id, search_spec.search_mode, search_spec.__dict__))
 
     variants = None
     if search_spec.search_mode == 'standard_inheritance':
