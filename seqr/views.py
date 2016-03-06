@@ -217,24 +217,31 @@ SELECT
     [%(project_id)s.variant_impacts_chosen_transcript]
     """ % locals()
 
+    reference_data_where_conditions_list = []
+    reference_data_sql_query = """
+SELECT xpos, ref, alt, g1k_AF, g1k_AF_POPMAX, exac_v3_AF, exac_v3_AF_POPMAX FROM reference_data_for_variants.all_data_v2015_11_30
+"""
     if 'variant_filter' in search_spec: 
         variant_filter = search_spec['variant_filter']
-        #if 'ref_freqs' in variant_filter:
-        #    for ref_freq in variant_filter['ref_freqs']:
-        #        # ["1kg_wgs_phase3", 0.01], ["1kg_wgs_phase3_popmax", 0.01], ["exac_v3", 0.01], ["exac_v3_popmax", 0.01]
-        #        if ref_freq[0] == '1kg_wgs_phase3':
-        #            variant_impacts_where_conditions_list.append('(rd.g1k_AF is null or rd.g1k_AF <= %s)' % ref_freq[1])
-        #        elif ref_freq[0] == '1kg_wgs_phase3_popmax':
-        #            variant_impacts_where_conditions_list.append('(rd.g1k_AF_POPMAX is null or rd.g1k_AF_POPMAX <= %s)' % ref_freq[1])
-        #        elif ref_freq[0] == 'exac_v3':
-        #            variant_impacts_where_conditions_list.append('(rd.exac_v3_AF is null or rd.exac_v3_AF <= %s)' % ref_freq[1])
-        #        elif ref_freq[0] == 'exac_v3_popmax':
-        #            variant_impacts_where_conditions_list.append('(float(rd.exac_v3_AF_POPMAX) is null or float(rd.exac_v3_AF_POPMAX) <= %s)' % ref_freq[1])
+        if 'ref_freqs' in variant_filter:
+            for ref_freq in variant_filter['ref_freqs']:
+                # ["1kg_wgs_phase3", 0.01], ["1kg_wgs_phase3_popmax", 0.01], ["exac_v3", 0.01], ["exac_v3_popmax", 0.01]
+                if ref_freq[0] == '1kg_wgs_phase3':
+                    reference_data_where_conditions_list.append('(g1k_AF is null or g1k_AF <= %s)' % ref_freq[1])
+                elif ref_freq[0] == '1kg_wgs_phase3_popmax':
+                    reference_data_where_conditions_list.append('(g1k_AF_POPMAX is null or g1k_AF_POPMAX <= %s)' % ref_freq[1])
+                elif ref_freq[0] == 'exac_v3':
+                    reference_data_where_conditions_list.append('(exac_v3_AF is null or exac_v3_AF <= %s)' % ref_freq[1])
+                elif ref_freq[0] == 'exac_v3_popmax':
+                    reference_data_where_conditions_list.append('(float(exac_v3_AF_POPMAX) is null or float(exac_v3_AF_POPMAX) <= %s)' % ref_freq[1])
         if 'genes' in variant_filter:
             variant_impacts_where_conditions_list.append("gene in ('%s')" % str("','".join([gene for gene in variant_filter['genes']])))
             
         if 'so_annotations' in variant_filter:
             variant_impacts_where_conditions_list.append("consequence in ('%s')" % str("','".join([so_annot for so_annot in variant_filter['so_annotations']])))
+        
+    if reference_data_where_conditions_list:
+        reference_data_sql_query += "WHERE " + " and ".join(reference_data_where_conditions_list)
         
     if variant_impacts_where_conditions_list:
         variant_impacts_sql_query += "WHERE " + " and ".join(variant_impacts_where_conditions_list)    
@@ -269,9 +276,10 @@ SELECT
 FROM (%(variant_genotypes_sql_query)s) as v 
 JOIN (%(variant_impacts_sql_query)s) as vi
 ON v.xpos=vi.xpos AND v.ref=vi.ref AND v.alt=vi.alt
+JOIN (%(reference_data_sql_query)s) as rd
+ON v.xpos=rd.xpos AND v.ref=rd.ref AND v.alt=rd.alt
 """ % locals()
     return sql_query
-        
         
 
 @login_required
@@ -284,11 +292,15 @@ def variant_search_api(request):
     form = api_forms.MendelianVariantSearchForm(request.GET)
     if form.is_valid():
 
+        millis_start = int(round(time.time() * 1000))
+        
         search_spec = form.cleaned_data['search_spec']
         sql_query = compute_sql_query(project, family.xfamily(), search_spec)
         print("Running sql query: \n############\n" + sql_query + "\n\n############")
         result, duration = query(sql_query)
-        print("Duration: %s millisec" % str(duration))
+        
+        millis_end = int(round(time.time() * 1000))
+
         print_header = True
         for r in result:
             if print_header:
@@ -297,7 +309,8 @@ def variant_search_api(request):
                 print_header = False
             print("\t".join(str(r[k]) for k in sorted(r.keys())))
                 
-            
+        print("Duration: %s millisec, actual: %s millisec, %s results" % (str(duration), str(millis_end - millis_start), len(result)))
+    
         
         search_spec.family_id = family.family_id
         
@@ -305,6 +318,8 @@ def variant_search_api(request):
         search_hash = cache_utils.save_results_for_spec(project.project_id, search_spec.toJSON(), [v.toJSON() for v in variants])
         add_extra_info_to_variants_family(get_reference(), family, variants)
 
+        print("#################")
+        print("\n".join(map(str, [v.toJSON() for v in variants][0:5])))
         return_type = request.GET.get('return_type', 'json')
         if return_type == 'json':
             return JSONResponse({
